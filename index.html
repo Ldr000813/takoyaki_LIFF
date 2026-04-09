@@ -2,12 +2,18 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>チェックイン</title>
+  <title>来店チェックイン</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+    select { width: 80%; padding: 10px; font-size: 16px; margin-bottom: 20px; }
+    button { width: 80%; padding: 15px; font-size: 18px; background-color: #00b900; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    #status { margin-top: 20px; color: #666; }
+  </style>
 </head>
 <body>
   <h2>来店チェックイン</h2>
-
   <p>来店目的を教えてください</p>
 
   <select id="purpose">
@@ -17,52 +23,60 @@
     <option value="友人">友人</option>
   </select>
 
-  <br><br>
+  <br>
 
-  <button onclick="sendData()">送信</button>
+  <button onclick="sendData()">送信してクーポンを取得</button>
 
-  <p id="status"></p>
+  <p id="status">読み込み中...</p>
 
   <script>
     let userId = "";
-    let shopId = "";
 
     async function init() {
-      await liff.init({ liffId: "2009757711-dbg9tKQU" });
+      try {
+        await liff.init({ liffId: "2009757711-dbg9tKQU" });
 
-      // ログインチェック
-      if (!liff.isLoggedIn()) {
-        liff.login();
-        return;
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+
+        document.getElementById("status").innerText = "準備完了";
+      } catch (err) {
+        document.getElementById("status").innerText = "初期化失敗: " + err;
       }
-
-      const profile = await liff.getProfile();
-      userId = profile.userId;
-
-      const params = new URLSearchParams(window.location.search);
-      shopId = params.get("shop_id");
-
-      document.getElementById("status").innerText = "準備完了";
     }
 
     async function sendData() {
       const purpose = document.getElementById("purpose").value;
+      const statusEl = document.getElementById("status");
+      statusEl.innerText = "送信中...";
 
       try {
         const res = await fetch("https://script.google.com/macros/s/AKfycbwa_CmZ9SbYtyeqQJ2wg3CIPLKAL8sfHymsZMHKQVIfP-2VSBuNC8UNFMFDAMaHAOMO/exec", {
           method: "POST",
+          mode: "no-cors", // GASへのPOSTで発生しやすいCORSエラーを回避
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: userId,
-            shopId: shopId,
             purpose: purpose,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toLocaleString("ja-JP") // 日本時間形式に
           })
         });
 
-        document.getElementById("status").innerText = "チェックイン完了！ありがとうございます！";
+        statusEl.innerText = "チェックイン完了！LINE画面に戻ってください。";
+        
+        // 3秒後にLIFFを閉じる
+        setTimeout(() => {
+          liff.closeWindow();
+        }, 3000);
 
       } catch (e) {
-        document.getElementById("status").innerText = "エラーが発生しました";
+        statusEl.innerText = "エラーが発生しました";
+        console.error(e);
       }
     }
 
