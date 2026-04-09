@@ -3,9 +3,70 @@
 <head>
   <meta charset="UTF-8" />
   <title>チェックイン</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
-  <h1>チェックイン中...</h1>
-  <p>少々お待ちください</p>
+  <h2>来店チェックイン</h2>
+
+  <p>来店目的を教えてください</p>
+
+  <select id="purpose">
+    <option value="ランチ">ランチ</option>
+    <option value="ディナー">ディナー</option>
+    <option value="デート">デート</option>
+    <option value="友人">友人</option>
+  </select>
+
+  <br><br>
+
+  <button onclick="sendData()">送信</button>
+
+  <p id="status"></p>
+
+  <script>
+    let userId = "";
+    let shopId = "";
+
+    async function init() {
+      await liff.init({ liffId: "2009757711-dbg9tKQU" });
+
+      // ログインチェック
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+
+      const profile = await liff.getProfile();
+      userId = profile.userId;
+
+      const params = new URLSearchParams(window.location.search);
+      shopId = params.get("shop_id");
+
+      document.getElementById("status").innerText = "準備完了";
+    }
+
+    async function sendData() {
+      const purpose = document.getElementById("purpose").value;
+
+      try {
+        const res = await fetch("https://script.google.com/macros/s/AKfycbwa_CmZ9SbYtyeqQJ2wg3CIPLKAL8sfHymsZMHKQVIfP-2VSBuNC8UNFMFDAMaHAOMO/exec", {
+          method: "POST",
+          body: JSON.stringify({
+            userId: userId,
+            shopId: shopId,
+            purpose: purpose,
+            timestamp: new Date().toISOString()
+          })
+        });
+
+        document.getElementById("status").innerText = "チェックイン完了！ありがとうございます！";
+
+      } catch (e) {
+        document.getElementById("status").innerText = "エラーが発生しました";
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>
